@@ -237,7 +237,7 @@ const Assets = () => {
   };
 
   // Group components by type for the component selection UI
-  const componentsByType = components.reduce((acc: Record<string, Component[]>, comp) => {
+  const componentsByType = components.reduce((acc: Record<string, typeof components[0][]>, comp) => {
     if (!acc[comp.type]) {
       acc[comp.type] = [];
     }

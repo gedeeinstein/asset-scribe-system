@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import MainLayout from '@/components/Layout/MainLayout';
 import DataTable from '@/components/DataTable';
@@ -29,7 +28,13 @@ const Categories = () => {
   const [data, setData] = useState([...categories]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Category | null>(null);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    id: string;
+    name: string;
+    description: string;
+    parentCategory: string | '';
+    active: boolean;
+  }>({
     id: '',
     name: '',
     description: '',
@@ -74,12 +79,14 @@ const Categories = () => {
 
   const handleEdit = (category: Category) => {
     setEditing(category);
-    setFormData({...category});
+    setFormData({
+      ...category,
+      parentCategory: category.parentCategory || ''
+    });
     setDialogOpen(true);
   };
 
   const handleDelete = (category: Category) => {
-    // Check if category is being used as a parent
     const isParent = data.some(c => c.parentCategory === category.id);
     if (isParent) {
       toast.error(`Cannot delete ${category.name} as it is a parent to other categories.`);
@@ -96,7 +103,6 @@ const Categories = () => {
     e.preventDefault();
     
     if (editing) {
-      // Prevent circular parent-child relationships
       if (formData.parentCategory === editing.id) {
         toast.error("A category cannot be its own parent.");
         return;
@@ -119,7 +125,6 @@ const Categories = () => {
     });
   };
 
-  // Get potential parent categories (exclude self if editing)
   const parentCategories = editing 
     ? categories.filter(c => c.id !== editing.id) 
     : categories;

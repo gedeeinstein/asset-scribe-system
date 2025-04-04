@@ -92,7 +92,7 @@ export const Sidebar = () => {
                         <SidebarMenu>
                           {item.items.map((subItem, subIndex) => (
                             <SidebarMenuItem key={`${index}-${subIndex}`}>
-                              <SidebarMenuButton asChild active={isActive(subItem.path)}>
+                              <SidebarMenuButton asChild isActive={isActive(subItem.path)}>
                                 <Link to={subItem.path} className="flex items-center">
                                   <subItem.icon className="mr-2 h-5 w-5" />
                                   <span>{subItem.title}</span>
@@ -109,7 +109,7 @@ export const Sidebar = () => {
                 // Regular menu item without subitems
                 return (
                   <SidebarMenuItem key={index}>
-                    <SidebarMenuButton asChild active={isActive(item.path)}>
+                    <SidebarMenuButton asChild isActive={isActive(item.path)}>
                       <Link to={item.path} className="flex items-center">
                         <item.icon className="mr-2 h-5 w-5" />
                         <span>{item.title}</span>
