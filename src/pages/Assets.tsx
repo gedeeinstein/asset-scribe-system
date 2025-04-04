@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import MainLayout from '@/components/Layout/MainLayout';
 import DataTable from '@/components/DataTable';
@@ -52,10 +51,14 @@ import {
   HardDrive,
   PackagePlus,
   PackageMinus,
-  X
+  X,
+  Barcode,
+  ScanBarcode
 } from "lucide-react";
 import { toast } from 'sonner';
 import { Checkbox } from '@/components/ui/checkbox';
+import BarcodeDisplay from '@/components/Barcode/BarcodeDisplay';
+import BarcodeScanner from '@/components/Barcode/BarcodeScanner';
 
 const Assets = () => {
   const [data, setData] = useState([...assets]);
@@ -76,6 +79,11 @@ const Assets = () => {
     notes: ''
   });
   const [selectedComponents, setSelectedComponents] = useState<string[]>([]);
+  
+  // Barcode states
+  const [barcodeDialogOpen, setBarcodeDialogOpen] = useState(false);
+  const [currentBarcode, setCurrentBarcode] = useState({ value: '', title: '' });
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   // Asset status options
   const statusOptions = ['Available', 'In Use', 'In Maintenance', 'Retired'];
@@ -163,6 +171,22 @@ const Assets = () => {
       title: 'Components',
       render: (row: Asset) => (
         <span>{row.components.length} components</span>
+      )
+    },
+    { 
+      key: 'actions',
+      title: 'Barcode',
+      render: (row: Asset) => (
+        <Button 
+          variant="ghost" 
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            showBarcode(row);
+          }}
+        >
+          <Barcode className="h-4 w-4" />
+        </Button>
       )
     }
   ];
@@ -253,6 +277,47 @@ const Assets = () => {
     });
   };
 
+  // Barcode functions
+  const showBarcode = (asset: Asset) => {
+    setCurrentBarcode({ 
+      value: asset.id, 
+      title: asset.name 
+    });
+    setBarcodeDialogOpen(true);
+  };
+
+  const handleScanBarcode = () => {
+    setScannerOpen(true);
+  };
+
+  const handleScannedBarcode = (value: string) => {
+    const asset = data.find(a => a.id === value);
+    
+    if (asset) {
+      // Use toast to display the asset info
+      toast.success(`Asset Found: ${asset.name}`, {
+        description: `Type: ${asset.type} | Status: ${asset.status}`
+      });
+      
+      // Find the index of the asset in the table
+      const index = data.findIndex(a => a.id === value);
+      
+      // Highlight the row (you might need to implement this functionality in your DataTable component)
+      const tableRows = document.querySelectorAll('table tr');
+      if (tableRows[index + 1]) { // +1 for the header row
+        tableRows[index + 1].scrollIntoView({ behavior: 'smooth', block: 'center' });
+        tableRows[index + 1].classList.add('bg-primary/10');
+        setTimeout(() => {
+          tableRows[index + 1].classList.remove('bg-primary/10');
+        }, 2000);
+      }
+    } else {
+      toast.error('Asset not found', {
+        description: 'No asset matches this barcode'
+      });
+    }
+  };
+
   return (
     <MainLayout title="Assets">
       <div className="space-y-6">
@@ -261,6 +326,10 @@ const Assets = () => {
             <h1 className="text-2xl font-bold">Assets</h1>
             <p className="text-muted-foreground">Manage all IT hardware and software assets</p>
           </div>
+          <Button variant="outline" onClick={handleScanBarcode}>
+            <ScanBarcode className="h-4 w-4 mr-2" />
+            Scan Barcode
+          </Button>
         </div>
         
         <DataTable 
@@ -522,6 +591,19 @@ const Assets = () => {
             </form>
           </DialogContent>
         </Dialog>
+
+        <BarcodeDisplay 
+          value={currentBarcode.value} 
+          title={currentBarcode.title}
+          open={barcodeDialogOpen}
+          onOpenChange={setBarcodeDialogOpen}
+        />
+
+        <BarcodeScanner
+          open={scannerOpen}
+          onOpenChange={setScannerOpen}
+          onScan={handleScannedBarcode}
+        />
       </div>
     </MainLayout>
   );

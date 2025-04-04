@@ -23,6 +23,8 @@ import {
 } from '@/components/ui/select';
 import { maintenance, assets, users, Maintenance } from '@/lib/data';
 import { toast } from 'sonner';
+import { Barcode, ScanBarcode } from 'lucide-react';
+import BarcodeScanner from '@/components/Barcode/BarcodeScanner';
 
 const MaintenancePage = () => {
   const [data, setData] = useState([...maintenance]);
@@ -40,6 +42,9 @@ const MaintenancePage = () => {
     completedDate: null,
     notes: ''
   });
+
+  // Add scanner state
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   // Maintenance type and status options
   const typeOptions: Maintenance['type'][] = ['Preventive', 'Corrective', 'Calibration', 'Upgrade'];
@@ -184,6 +189,64 @@ const MaintenancePage = () => {
     user.role === 'IT Admin' || user.role === 'IT Support'
   );
 
+  // Handle barcode scan
+  const handleScanBarcode = () => {
+    setScannerOpen(true);
+  };
+
+  const handleScannedBarcode = (value: string) => {
+    // Find the asset based on the scanned barcode (asset ID)
+    const asset = assets.find(a => a.id === value);
+    
+    if (asset) {
+      // Check if there are any maintenance records for this asset
+      const assetMaintenance = data.filter(m => m.assetId === asset.id);
+      
+      if (assetMaintenance.length > 0) {
+        toast.success(`Asset Found: ${asset.name}`, {
+          description: `${assetMaintenance.length} maintenance record(s) found`
+        });
+        
+        // Highlight maintenance records for this asset
+        const tableRows = document.querySelectorAll('table tr');
+        assetMaintenance.forEach(maintenance => {
+          const index = data.findIndex(m => m.id === maintenance.id);
+          if (tableRows[index + 1]) { // +1 for the header row
+            tableRows[index + 1].scrollIntoView({ behavior: 'smooth', block: 'center' });
+            tableRows[index + 1].classList.add('bg-primary/10');
+            setTimeout(() => {
+              tableRows[index + 1].classList.remove('bg-primary/10');
+            }, 2000);
+          }
+        });
+      } else {
+        toast.info(`Asset Found: ${asset.name}`, {
+          description: "No maintenance records found. Create one?"
+        });
+        
+        // Pre-fill form for new maintenance record
+        setFormData({
+          id: `m${Date.now()}`,
+          assetId: asset.id,
+          assetName: asset.name,
+          type: 'Preventive',
+          status: 'Scheduled',
+          description: '',
+          assignedTo: '',
+          scheduledDate: new Date().toISOString().split('T')[0],
+          completedDate: null,
+          notes: ''
+        });
+        setEditing(null);
+        setDialogOpen(true);
+      }
+    } else {
+      toast.error('Asset not found', {
+        description: 'No asset matches this barcode'
+      });
+    }
+  };
+
   return (
     <MainLayout title="Maintenance">
       <div className="space-y-6">
@@ -192,6 +255,10 @@ const MaintenancePage = () => {
             <h1 className="text-2xl font-bold">Maintenance Records</h1>
             <p className="text-muted-foreground">Track and manage asset maintenance activities</p>
           </div>
+          <Button variant="outline" onClick={handleScanBarcode}>
+            <ScanBarcode className="h-4 w-4 mr-2" />
+            Scan Asset Barcode
+          </Button>
         </div>
         
         <DataTable 
@@ -347,6 +414,13 @@ const MaintenancePage = () => {
             </form>
           </DialogContent>
         </Dialog>
+
+        {/* Barcode Scanner Dialog */}
+        <BarcodeScanner
+          open={scannerOpen}
+          onOpenChange={setScannerOpen}
+          onScan={handleScannedBarcode}
+        />
       </div>
     </MainLayout>
   );
