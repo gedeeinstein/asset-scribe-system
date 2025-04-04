@@ -175,7 +175,7 @@ const Assets = () => {
     },
     { 
       key: 'actions',
-      title: 'Barcode',
+      title: 'ID Code',
       render: (row: Asset) => (
         <Button 
           variant="ghost" 
@@ -302,7 +302,7 @@ const Assets = () => {
       // Find the index of the asset in the table
       const index = data.findIndex(a => a.id === value);
       
-      // Highlight the row (you might need to implement this functionality in your DataTable component)
+      // Highlight the row
       const tableRows = document.querySelectorAll('table tr');
       if (tableRows[index + 1]) { // +1 for the header row
         tableRows[index + 1].scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -313,7 +313,7 @@ const Assets = () => {
       }
     } else {
       toast.error('Asset not found', {
-        description: 'No asset matches this barcode'
+        description: 'No asset matches this code'
       });
     }
   };
@@ -328,7 +328,7 @@ const Assets = () => {
           </div>
           <Button variant="outline" onClick={handleScanBarcode}>
             <ScanBarcode className="h-4 w-4 mr-2" />
-            Scan Barcode
+            Scan Code
           </Button>
         </div>
         

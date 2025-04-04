@@ -195,7 +195,7 @@ const MaintenancePage = () => {
   };
 
   const handleScannedBarcode = (value: string) => {
-    // Find the asset based on the scanned barcode (asset ID)
+    // Find the asset based on the scanned barcode or QR code (asset ID)
     const asset = assets.find(a => a.id === value);
     
     if (asset) {
@@ -242,7 +242,7 @@ const MaintenancePage = () => {
       }
     } else {
       toast.error('Asset not found', {
-        description: 'No asset matches this barcode'
+        description: 'No asset matches this code'
       });
     }
   };
@@ -257,7 +257,7 @@ const MaintenancePage = () => {
           </div>
           <Button variant="outline" onClick={handleScanBarcode}>
             <ScanBarcode className="h-4 w-4 mr-2" />
-            Scan Asset Barcode
+            Scan Asset Code
           </Button>
         </div>
         

@@ -21,7 +21,7 @@ const BarcodeScanner = ({ open, onOpenChange, onScan }: BarcodeScannerProps) => 
   // Load the barcode detection library
   useEffect(() => {
     if (open) {
-      // Load ZXing library for barcode detection
+      // Load ZXing library for barcode and QR code detection
       const script = document.createElement('script');
       script.src = 'https://unpkg.com/@zxing/library@0.19.1';
       script.async = true;
@@ -65,7 +65,7 @@ const BarcodeScanner = ({ open, onOpenChange, onScan }: BarcodeScannerProps) => 
         // Start scanning after camera is ready
         videoRef.current.onloadedmetadata = () => {
           setScanning(true);
-          scanBarcode();
+          scanCode();
         };
       }
     } catch (error) {
@@ -86,9 +86,9 @@ const BarcodeScanner = ({ open, onOpenChange, onScan }: BarcodeScannerProps) => 
     }
   };
 
-  const scanBarcode = async () => {
+  const scanCode = async () => {
     if (!scanning || !videoRef.current || !canvasRef.current || !window.ZXing) {
-      animationRef.current = requestAnimationFrame(scanBarcode);
+      animationRef.current = requestAnimationFrame(scanCode);
       return;
     }
 
@@ -109,7 +109,13 @@ const BarcodeScanner = ({ open, onOpenChange, onScan }: BarcodeScannerProps) => 
         const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
         
         const hints = new Map();
-        const formats = [window.ZXing.BarcodeFormat.CODE_128, window.ZXing.BarcodeFormat.QR_CODE];
+        // Include both barcode and QR code formats
+        const formats = [
+          window.ZXing.BarcodeFormat.CODE_128, 
+          window.ZXing.BarcodeFormat.QR_CODE,
+          window.ZXing.BarcodeFormat.EAN_13,
+          window.ZXing.BarcodeFormat.DATA_MATRIX
+        ];
         hints.set(window.ZXing.DecodeHintType.POSSIBLE_FORMATS, formats);
         
         // Create ZXing reader
@@ -120,24 +126,28 @@ const BarcodeScanner = ({ open, onOpenChange, onScan }: BarcodeScannerProps) => 
         const luminanceSource = new window.ZXing.HTMLCanvasElementLuminanceSource(canvas);
         const binaryBitmap = new window.ZXing.BinaryBitmap(new window.ZXing.HybridBinarizer(luminanceSource));
         
-        // Try to decode the barcode
+        // Try to decode the code
         const result = reader.decode(binaryBitmap);
         
         if (result && result.text) {
-          // Barcode found!
+          // Code found!
           stopCamera();
           onScan(result.text);
           onOpenChange(false);
-          toast.success('Barcode scanned successfully!');
+          
+          // Detect if it was a barcode or QR code
+          const formatName = window.ZXing.BarcodeFormat[result.getBarcodeFormat()];
+          const codeType = formatName === 'QR_CODE' ? 'QR Code' : 'Barcode';
+          toast.success(`${codeType} scanned successfully!`);
           return;
         }
       } catch (error) {
-        // No barcode found, continue scanning
+        // No code found, continue scanning
       }
     }
     
     // Continue scanning
-    animationRef.current = requestAnimationFrame(scanBarcode);
+    animationRef.current = requestAnimationFrame(scanCode);
   };
 
   return (
@@ -147,7 +157,7 @@ const BarcodeScanner = ({ open, onOpenChange, onScan }: BarcodeScannerProps) => 
     }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Scan Barcode</DialogTitle>
+          <DialogTitle>Scan Barcode or QR Code</DialogTitle>
         </DialogHeader>
         <div className="relative">
           <video 
@@ -167,7 +177,7 @@ const BarcodeScanner = ({ open, onOpenChange, onScan }: BarcodeScannerProps) => 
           </div>
         </div>
         <p className="text-sm text-center text-muted-foreground">
-          Position the barcode in the center of the camera frame
+          Position the barcode or QR code in the center of the camera frame
         </p>
         <DialogFooter className="sm:justify-center">
           <Button variant="outline" onClick={() => {
