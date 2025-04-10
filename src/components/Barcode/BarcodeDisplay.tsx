@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import Barcode from 'react-barcode';
-import QRCode from 'qrcode.react';
+import { QRCodeSVG } from 'qrcode.react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Printer, Download, Barcode as BarcodeIcon, QrCode } from 'lucide-react';
@@ -156,7 +156,7 @@ const BarcodeDisplay = ({ value, title, open, onOpenChange }: BarcodeDisplayProp
           </TabsContent>
           
           <TabsContent value="qrcode" className="flex flex-col items-center justify-center p-4">
-            <QRCode value={value} size={200} />
+            <QRCodeSVG value={value} size={200} />
             <p className="text-center text-sm text-muted-foreground mt-2">
               Scan this QR code to quickly identify this asset
             </p>
