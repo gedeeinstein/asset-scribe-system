@@ -1,133 +1,145 @@
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
-import { maintenanceRecords } from "../../data/mockData";
-import { Maintenance, Asset } from "../../types/models";
-import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { assets } from "@/data/mockData";
+import { Maintenance } from "@/types/models";
 import MaintenanceTable from "./MaintenanceTable";
-import MaintenanceDialog from "./MaintenanceDialog";
+import MaintenanceForm, { MaintenanceFormValues } from "./MaintenanceForm";
+
+// Mock data for maintenance records
+const initialMaintenanceData: Maintenance[] = [
+  {
+    id: "m1",
+    assetId: "a1",
+    maintenanceType: "Repair",
+    status: "Completed",
+    priority: "High",
+    assignedTo: "u1",
+    scheduleDate: "2025-04-01",
+    completionDate: "2025-04-05",
+    description: "Replace faulty hard drive",
+    notes: "Replaced with a 1TB SSD",
+    createdAt: "2025-03-30",
+    updatedAt: "2025-04-05"
+  },
+  {
+    id: "m2",
+    assetId: "a2",
+    maintenanceType: "Preventive",
+    status: "Scheduled",
+    priority: "Medium",
+    scheduleDate: "2025-04-15",
+    description: "Routine system maintenance and cleaning",
+    createdAt: "2025-04-02",
+    updatedAt: "2025-04-02"
+  },
+  {
+    id: "m3",
+    assetId: "a3",
+    maintenanceType: "Upgrade",
+    status: "In Progress",
+    priority: "Low",
+    assignedTo: "u2",
+    scheduleDate: "2025-04-10",
+    description: "Upgrade RAM from 8GB to 16GB",
+    createdAt: "2025-04-08",
+    updatedAt: "2025-04-09"
+  }
+];
 
 const MaintenancePage = () => {
-  const [maintenanceList, setMaintenanceList] = useState<Maintenance[]>(maintenanceRecords);
+  const [maintenanceRecords, setMaintenanceRecords] = useState<Maintenance[]>(initialMaintenanceData);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isScannerOpen, setIsScannerOpen] = useState(false);
-  const [currentMaintenance, setCurrentMaintenance] = useState<Maintenance | null>(null);
-  const [scannedAsset, setScannedAsset] = useState<Asset | null>(null);
-  const { toast } = useToast();
+  const [currentRecord, setCurrentRecord] = useState<Maintenance | undefined>(undefined);
+  const [mode, setMode] = useState<"create" | "edit">("create");
 
-  const handleAddOrUpdateMaintenance = (formData: FormData) => {    
-    const maintenance: Maintenance = {
-      id: currentMaintenance?.id || `maintenance-${Date.now()}`,
-      assetId: formData.get('assetId') as string,
-      reportedById: formData.get('reportedById') as string,
-      assignedToId: formData.get('assignedToId') as string || undefined,
-      title: formData.get('title') as string,
-      description: formData.get('description') as string,
-      status: formData.get('status') as Maintenance['status'],
-      priority: formData.get('priority') as Maintenance['priority'],
-      dateReported: formData.get('dateReported') as string || new Date().toISOString(),
-      dateCompleted: formData.get('status') === 'completed' ? new Date().toISOString() : undefined,
-      solution: formData.get('solution') as string || undefined,
-      cost: formData.get('cost') ? Number(formData.get('cost')) : undefined,
-      createdAt: currentMaintenance?.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    if (currentMaintenance) {
-      setMaintenanceList(prev => prev.map(m => m.id === maintenance.id ? maintenance : m));
-      toast({
-        title: "Maintenance Updated",
-        description: "The maintenance record has been updated successfully",
-      });
-    } else {
-      setMaintenanceList(prev => [...prev, maintenance]);
-      toast({
-        title: "Maintenance Added",
-        description: "The new maintenance record has been added successfully",
-      });
-    }
-    
-    setIsDialogOpen(false);
-    setCurrentMaintenance(null);
-    setScannedAsset(null);
-  };
-
-  const handleDeleteMaintenance = (id: string) => {
-    setMaintenanceList(prev => prev.filter(maintenance => maintenance.id !== id));
-    toast({
-      title: "Maintenance Deleted",
-      description: "The maintenance record has been deleted successfully",
-      variant: "destructive"
-    });
-  };
-
-  const handleEditMaintenance = (maintenance: Maintenance) => {
-    setCurrentMaintenance(maintenance);
+  // Open dialog for creating a new record
+  const handleCreate = () => {
+    setCurrentRecord(undefined);
+    setMode("create");
     setIsDialogOpen(true);
   };
 
-  const handleCompleteMaintenance = (id: string) => {
-    setMaintenanceList(prev => prev.map(maintenance => 
-      maintenance.id === id 
-        ? { 
-            ...maintenance, 
-            status: 'completed', 
-            dateCompleted: new Date().toISOString(), 
-            updatedAt: new Date().toISOString() 
-          } 
-        : maintenance
-    ));
-    toast({
-      title: "Maintenance Completed",
-      description: "The maintenance has been marked as completed",
-    });
+  // Open dialog for editing an existing record
+  const handleEdit = (record: Maintenance) => {
+    setCurrentRecord(record);
+    setMode("edit");
+    setIsDialogOpen(true);
   };
 
-  const handleScanResult = (code: string) => {
-    const asset = assets.find(a => a.assetTag === code);
-    
-    if (asset) {
-      setScannedAsset(asset);
-      toast({
-        title: "Asset Found",
-        description: `Found: ${asset.name} (${asset.assetTag})`,
-      });
-    } else {
-      toast({
-        title: "Asset Not Found",
-        description: `No asset found with tag: ${code}`,
-        variant: "destructive"
-      });
+  // Delete a maintenance record
+  const handleDelete = (id: string) => {
+    setMaintenanceRecords(prev => prev.filter(record => record.id !== id));
+  };
+
+  // Handle form submission (create or edit)
+  const handleFormSubmit = (values: MaintenanceFormValues) => {
+    if (mode === "create") {
+      // Create new record
+      const newRecord: Maintenance = {
+        id: `m${Date.now()}`,
+        ...values,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      setMaintenanceRecords(prev => [...prev, newRecord]);
+    } else if (mode === "edit" && currentRecord) {
+      // Update existing record
+      setMaintenanceRecords(prev => prev.map(record => 
+        record.id === currentRecord.id 
+          ? { 
+              ...record, 
+              ...values, 
+              updatedAt: new Date().toISOString()
+            } 
+          : record
+      ));
     }
-    
-    setIsScannerOpen(false);
+    setIsDialogOpen(false);
+  };
+
+  // Close the form dialog
+  const handleCancel = () => {
+    setIsDialogOpen(false);
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="container mx-auto">
+      <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold">Maintenance</h1>
-          <p className="text-muted-foreground">Track and manage maintenance activities</p>
+          <h1 className="text-2xl font-bold">Maintenance Records</h1>
+          <p className="text-muted-foreground">
+            Track and manage maintenance for {assets.length} assets
+          </p>
         </div>
-        <MaintenanceDialog
-          isOpen={isDialogOpen}
-          setIsOpen={setIsDialogOpen}
-          currentMaintenance={currentMaintenance}
-          onSubmit={handleAddOrUpdateMaintenance}
-          isScannerOpen={isScannerOpen}
-          setIsScannerOpen={setIsScannerOpen}
-          scannedAsset={scannedAsset}
-          onScan={handleScanResult}
-        />
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button onClick={handleCreate}>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Maintenance
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[600px]">
+            <MaintenanceForm
+              onSubmit={handleFormSubmit}
+              initialValues={currentRecord}
+              mode={mode}
+              onCancel={handleCancel}
+            />
+          </DialogContent>
+        </Dialog>
       </div>
 
-      <MaintenanceTable 
-        maintenanceList={maintenanceList}
-        onEdit={handleEditMaintenance}
-        onComplete={handleCompleteMaintenance}
-        onDelete={handleDeleteMaintenance}
+      <MaintenanceTable
+        maintenanceRecords={maintenanceRecords}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
       />
     </div>
   );
