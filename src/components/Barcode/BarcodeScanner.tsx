@@ -21,7 +21,7 @@ const BarcodeScanner = ({ open, onOpenChange, onScan }: BarcodeScannerProps) => 
   // Load the barcode detection library
   useEffect(() => {
     if (open) {
-      // Load ZXing library for barcode detection
+      // Load ZXing library for barcode and QR code detection
       const script = document.createElement('script');
       script.src = 'https://unpkg.com/@zxing/library@0.19.1';
       script.async = true;
@@ -109,7 +109,12 @@ const BarcodeScanner = ({ open, onOpenChange, onScan }: BarcodeScannerProps) => 
         const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
         
         const hints = new Map();
-        const formats = [window.ZXing.BarcodeFormat.CODE_128, window.ZXing.BarcodeFormat.QR_CODE];
+        // Add support for both barcodes and QR codes
+        const formats = [
+          window.ZXing.BarcodeFormat.CODE_128, 
+          window.ZXing.BarcodeFormat.QR_CODE,
+          window.ZXing.BarcodeFormat.EAN_13
+        ];
         hints.set(window.ZXing.DecodeHintType.POSSIBLE_FORMATS, formats);
         
         // Create ZXing reader
@@ -124,15 +129,17 @@ const BarcodeScanner = ({ open, onOpenChange, onScan }: BarcodeScannerProps) => 
         const result = reader.decode(binaryBitmap);
         
         if (result && result.text) {
-          // Barcode found!
+          // Code found!
           stopCamera();
           onScan(result.text);
           onOpenChange(false);
-          toast.success('Barcode scanned successfully!');
+          
+          const codeType = result.getBarcodeFormat() === window.ZXing.BarcodeFormat.QR_CODE ? 'QR code' : 'Barcode';
+          toast.success(`${codeType} scanned successfully!`);
           return;
         }
       } catch (error) {
-        // No barcode found, continue scanning
+        // No code found, continue scanning
       }
     }
     
@@ -147,7 +154,7 @@ const BarcodeScanner = ({ open, onOpenChange, onScan }: BarcodeScannerProps) => 
     }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Scan Barcode</DialogTitle>
+          <DialogTitle>Scan Barcode or QR Code</DialogTitle>
         </DialogHeader>
         <div className="relative">
           <video 
@@ -167,7 +174,7 @@ const BarcodeScanner = ({ open, onOpenChange, onScan }: BarcodeScannerProps) => 
           </div>
         </div>
         <p className="text-sm text-center text-muted-foreground">
-          Position the barcode in the center of the camera frame
+          Position the barcode or QR code in the center of the camera frame
         </p>
         <DialogFooter className="sm:justify-center">
           <Button variant="outline" onClick={() => {

@@ -53,7 +53,8 @@ import {
   PackageMinus,
   X,
   Barcode,
-  ScanBarcode
+  ScanBarcode,
+  QrCode
 } from "lucide-react";
 import { toast } from 'sonner';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -80,15 +81,12 @@ const Assets = () => {
   });
   const [selectedComponents, setSelectedComponents] = useState<string[]>([]);
   
-  // Barcode states
   const [barcodeDialogOpen, setBarcodeDialogOpen] = useState(false);
   const [currentBarcode, setCurrentBarcode] = useState({ value: '', title: '' });
   const [scannerOpen, setScannerOpen] = useState(false);
 
-  // Asset status options
   const statusOptions = ['Available', 'In Use', 'In Maintenance', 'Retired'];
-  
-  // Get icon for asset type
+
   const getAssetIcon = (type: string) => {
     switch (type) {
       case 'Desktop PC':
@@ -175,7 +173,7 @@ const Assets = () => {
     },
     { 
       key: 'actions',
-      title: 'Barcode',
+      title: 'Code',
       render: (row: Asset) => (
         <Button 
           variant="ghost" 
@@ -185,7 +183,10 @@ const Assets = () => {
             showBarcode(row);
           }}
         >
-          <Barcode className="h-4 w-4" />
+          <div className="flex items-center">
+            <Barcode className="h-4 w-4 mr-1" />
+            <QrCode className="h-4 w-4" />
+          </div>
         </Button>
       )
     }
@@ -228,7 +229,6 @@ const Assets = () => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Update formData with selected components
     const updatedFormData = {
       ...formData,
       components: selectedComponents
@@ -260,7 +260,6 @@ const Assets = () => {
     }
   };
 
-  // Group components by type for the component selection UI
   const componentsByType = components.reduce((acc: Record<string, typeof components[0][]>, comp) => {
     if (!acc[comp.type]) {
       acc[comp.type] = [];
@@ -269,7 +268,6 @@ const Assets = () => {
     return acc;
   }, {});
 
-  // Get the names of selected components
   const getSelectedComponentNames = () => {
     return selectedComponents.map(id => {
       const component = components.find(c => c.id === id);
@@ -277,7 +275,6 @@ const Assets = () => {
     });
   };
 
-  // Barcode functions
   const showBarcode = (asset: Asset) => {
     setCurrentBarcode({ 
       value: asset.id, 
@@ -294,17 +291,14 @@ const Assets = () => {
     const asset = data.find(a => a.id === value);
     
     if (asset) {
-      // Use toast to display the asset info
       toast.success(`Asset Found: ${asset.name}`, {
         description: `Type: ${asset.type} | Status: ${asset.status}`
       });
       
-      // Find the index of the asset in the table
       const index = data.findIndex(a => a.id === value);
       
-      // Highlight the row (you might need to implement this functionality in your DataTable component)
       const tableRows = document.querySelectorAll('table tr');
-      if (tableRows[index + 1]) { // +1 for the header row
+      if (tableRows[index + 1]) {
         tableRows[index + 1].scrollIntoView({ behavior: 'smooth', block: 'center' });
         tableRows[index + 1].classList.add('bg-primary/10');
         setTimeout(() => {
@@ -328,7 +322,7 @@ const Assets = () => {
           </div>
           <Button variant="outline" onClick={handleScanBarcode}>
             <ScanBarcode className="h-4 w-4 mr-2" />
-            Scan Barcode
+            Scan Code
           </Button>
         </div>
         

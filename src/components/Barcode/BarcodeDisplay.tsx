@@ -1,9 +1,11 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import Barcode from 'react-barcode';
+import QRCode from 'qrcode.react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Printer, Download } from 'lucide-react';
+import { Printer, Download, Barcode as BarcodeIcon, QrCode } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface BarcodeDisplayProps {
   value: string;
@@ -13,6 +15,8 @@ interface BarcodeDisplayProps {
 }
 
 const BarcodeDisplay = ({ value, title, open, onOpenChange }: BarcodeDisplayProps) => {
+  const [codeType, setCodeType] = useState<'barcode' | 'qrcode'>('barcode');
+
   const handlePrint = () => {
     const printWindow = window.open('', '_blank');
     
@@ -20,14 +24,14 @@ const BarcodeDisplay = ({ value, title, open, onOpenChange }: BarcodeDisplayProp
       printWindow.document.write(`
         <html>
           <head>
-            <title>Print Barcode - ${title}</title>
+            <title>Print ${codeType === 'barcode' ? 'Barcode' : 'QR Code'} - ${title}</title>
             <style>
               body {
                 font-family: sans-serif;
                 text-align: center;
                 padding: 20px;
               }
-              .barcode-container {
+              .code-container {
                 margin: 30px auto;
               }
               .asset-info {
@@ -39,17 +43,27 @@ const BarcodeDisplay = ({ value, title, open, onOpenChange }: BarcodeDisplayProp
           </head>
           <body>
             <div class="asset-info">${title}</div>
-            <div class="barcode-container" id="barcode-container"></div>
-            <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
-            <script>
-              JsBarcode("#barcode-container", "${value}", {
-                format: "CODE128",
-                displayValue: true,
-                fontSize: 18,
-                margin: 10
-              });
-              setTimeout(() => { window.print(); window.close(); }, 500);
-            </script>
+            <div class="code-container" id="code-container"></div>
+            ${codeType === 'barcode' 
+              ? `<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+                 <script>
+                   JsBarcode("#code-container", "${value}", {
+                     format: "CODE128",
+                     displayValue: true,
+                     fontSize: 18,
+                     margin: 10
+                   });
+                   setTimeout(() => { window.print(); window.close(); }, 500);
+                 </script>`
+              : `<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.1/build/qrcode.min.js"></script>
+                 <script>
+                   QRCode.toCanvas(document.getElementById("code-container"), "${value}", {
+                     width: 200,
+                     margin: 1
+                   });
+                   setTimeout(() => { window.print(); window.close(); }, 500);
+                 </script>`
+            }
           </body>
         </html>
       `);
@@ -58,7 +72,7 @@ const BarcodeDisplay = ({ value, title, open, onOpenChange }: BarcodeDisplayProp
   };
 
   const handleDownload = () => {
-    // Create a canvas element to render the barcode
+    // Create a canvas element to render the code
     const canvas = document.createElement('canvas');
     canvas.width = 300;
     canvas.height = 150;
@@ -75,27 +89,43 @@ const BarcodeDisplay = ({ value, title, open, onOpenChange }: BarcodeDisplayProp
       ctx.textAlign = 'center';
       ctx.fillText(title, canvas.width / 2, 20);
       
-      // Use JsBarcode to render to canvas
-      // We need to use a temporary DOM element
-      const tempImg = document.createElement('img');
-      JsBarcode(tempImg, value, {
-        format: "CODE128",
-        displayValue: true,
-        fontSize: 12,
-        margin: 10
-      });
-      
-      // When the image is loaded, draw it on our canvas
-      tempImg.onload = () => {
-        ctx.drawImage(tempImg, 0, 30);
+      if (codeType === 'barcode') {
+        // Use JsBarcode to render to canvas
+        // We need to use a temporary DOM element
+        const tempImg = document.createElement('img');
+        window.JsBarcode(tempImg, value, {
+          format: "CODE128",
+          displayValue: true,
+          fontSize: 12,
+          margin: 10
+        });
+        
+        // When the image is loaded, draw it on our canvas
+        tempImg.onload = () => {
+          ctx.drawImage(tempImg, 0, 30);
+          
+          // Convert to data URL and trigger download
+          const dataURL = canvas.toDataURL('image/png');
+          const link = document.createElement('a');
+          link.download = `barcode-${value}.png`;
+          link.href = dataURL;
+          link.click();
+        };
+      } else {
+        // Use QRCode for QR code
+        const qrCanvas = document.createElement('canvas');
+        window.QRCode.toCanvas(qrCanvas, value, { width: 120, margin: 0 });
+        
+        // Draw QR code to our main canvas
+        ctx.drawImage(qrCanvas, canvas.width / 2 - 60, 30);
         
         // Convert to data URL and trigger download
         const dataURL = canvas.toDataURL('image/png');
         const link = document.createElement('a');
-        link.download = `barcode-${value}.png`;
+        link.download = `qrcode-${value}.png`;
         link.href = dataURL;
         link.click();
-      };
+      }
     }
   };
 
@@ -103,14 +133,36 @@ const BarcodeDisplay = ({ value, title, open, onOpenChange }: BarcodeDisplayProp
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{title} - Barcode</DialogTitle>
+          <DialogTitle>{title} - Code</DialogTitle>
         </DialogHeader>
-        <div className="flex flex-col items-center justify-center p-4">
-          <Barcode value={value} />
-          <p className="text-center text-sm text-muted-foreground mt-2">
-            Scan this barcode to quickly identify this asset
-          </p>
-        </div>
+        
+        <Tabs defaultValue="barcode" onValueChange={(value) => setCodeType(value as 'barcode' | 'qrcode')}>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="barcode">
+              <BarcodeIcon className="h-4 w-4 mr-2" />
+              Barcode
+            </TabsTrigger>
+            <TabsTrigger value="qrcode">
+              <QrCode className="h-4 w-4 mr-2" />
+              QR Code
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="barcode" className="flex flex-col items-center justify-center p-4">
+            <Barcode value={value} />
+            <p className="text-center text-sm text-muted-foreground mt-2">
+              Scan this barcode to quickly identify this asset
+            </p>
+          </TabsContent>
+          
+          <TabsContent value="qrcode" className="flex flex-col items-center justify-center p-4">
+            <QRCode value={value} size={200} />
+            <p className="text-center text-sm text-muted-foreground mt-2">
+              Scan this QR code to quickly identify this asset
+            </p>
+          </TabsContent>
+        </Tabs>
+        
         <DialogFooter className="sm:justify-center gap-2">
           <Button variant="outline" onClick={handlePrint}>
             <Printer className="h-4 w-4 mr-2" />
@@ -126,10 +178,11 @@ const BarcodeDisplay = ({ value, title, open, onOpenChange }: BarcodeDisplayProp
   );
 };
 
-// Define JsBarcode as it's loaded from a CDN in the print window
+// Define global interfaces for libraries loaded from CDN
 declare global {
   interface Window {
     JsBarcode: any;
+    QRCode: any;
   }
 }
 
