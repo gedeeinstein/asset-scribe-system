@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import MainLayout from '@/components/Layout/MainLayout';
 import DataTable from '@/components/DataTable';
@@ -418,14 +419,14 @@ const Assets = () => {
                     <div className="space-y-2">
                       <Label htmlFor="assignedTo">Assigned To (Optional)</Label>
                       <Select 
-                        value={formData.assignedTo || ""} 
-                        onValueChange={(value) => handleChange('assignedTo', value || null)}
+                        value={formData.assignedTo || "unassigned"} 
+                        onValueChange={(value) => handleChange('assignedTo', value === "unassigned" ? null : value)}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Unassigned" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Unassigned</SelectItem>
+                          <SelectItem value="unassigned">Unassigned</SelectItem>
                           {users.map(user => (
                             <SelectItem key={user.id} value={user.name}>
                               {user.name}
@@ -437,14 +438,14 @@ const Assets = () => {
                     <div className="space-y-2">
                       <Label htmlFor="division">Division (Optional)</Label>
                       <Select 
-                        value={formData.division || ""} 
-                        onValueChange={(value) => handleChange('division', value || null)}
+                        value={formData.division || "unassigned"} 
+                        onValueChange={(value) => handleChange('division', value === "unassigned" ? null : value)}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder="Unassigned" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Unassigned</SelectItem>
+                          <SelectItem value="unassigned">Unassigned</SelectItem>
                           {divisions.map(division => (
                             <SelectItem key={division.id} value={division.name}>
                               {division.name}
