@@ -1,4 +1,5 @@
 
+import React from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -14,27 +15,30 @@ import Assets from "./pages/Assets";
 import Maintenance from "./pages/Maintenance";
 import NotFound from "./pages/NotFound";
 
+// Create the QueryClient outside of the component
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          <Route path="/users" element={<Users />} />
-          <Route path="/divisions" element={<Divisions />} />
-          <Route path="/categories" element={<Categories />} />
-          <Route path="/components" element={<Components />} />
-          <Route path="/assets" element={<Assets />} />
-          <Route path="/maintenance" element={<Maintenance />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+const App: React.FC = () => {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<Index />} />
+            <Route path="/users" element={<Users />} />
+            <Route path="/divisions" element={<Divisions />} />
+            <Route path="/categories" element={<Categories />} />
+            <Route path="/components" element={<Components />} />
+            <Route path="/assets" element={<Assets />} />
+            <Route path="/maintenance" element={<Maintenance />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;
