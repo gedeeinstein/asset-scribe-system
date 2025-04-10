@@ -1,240 +1,225 @@
-
-import { useState } from "react";
-import { 
-  Table, 
-  TableBody, 
-  TableCaption, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow
-} from "@/components/ui/table";
+import React, { useState } from 'react';
+import MainLayout from '@/components/Layout/MainLayout';
+import DataTable from '@/components/DataTable';
 import { 
   Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogTrigger 
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
+import { categories, Category } from '@/lib/data';
 import { 
   Select, 
   SelectContent, 
   SelectItem, 
   SelectTrigger, 
   SelectValue 
-} from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
-import { Plus, MoreHorizontal, Edit, Trash } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { categories } from "../data/mockData";
-import { Category } from "../types/models";
+} from '@/components/ui/select';
+import { toast } from 'sonner';
 
 const Categories = () => {
-  const [categoriesList, setCategoriesList] = useState<Category[]>(categories);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [currentCategory, setCurrentCategory] = useState<Category | null>(null);
-  const { toast } = useToast();
+  const [data, setData] = useState([...categories]);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<Category | null>(null);
+  const [formData, setFormData] = useState<{
+    id: string;
+    name: string;
+    description: string;
+    parentCategory: string | '';
+    active: boolean;
+  }>({
+    id: '',
+    name: '',
+    description: '',
+    parentCategory: '',
+    active: true
+  });
 
-  const handleAddOrUpdateCategory = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    
-    const category: Category = {
-      id: currentCategory?.id || `category-${Date.now()}`,
-      name: formData.get('name') as string,
-      description: formData.get('description') as string || undefined,
-      type: formData.get('type') as Category['type'],
-      createdAt: currentCategory?.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
+  const columns = [
+    { key: 'name', title: 'Category Name' },
+    { key: 'description', title: 'Description' },
+    { 
+      key: 'parentCategory', 
+      title: 'Parent Category',
+      render: (row: Category) => {
+        if (!row.parentCategory) return <span className="text-muted-foreground">None</span>;
+        const parent = categories.find(c => c.id === row.parentCategory);
+        return <span>{parent ? parent.name : 'Unknown'}</span>;
+      }
+    },
+    { 
+      key: 'active', 
+      title: 'Status',
+      render: (row: Category) => (
+        <span className={`px-2 py-1 text-xs rounded-full ${row.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+          {row.active ? 'Active' : 'Inactive'}
+        </span>
+      )
+    },
+  ];
 
-    if (currentCategory) {
-      setCategoriesList(prev => prev.map(c => c.id === category.id ? category : c));
-      toast({
-        title: "Category Updated",
-        description: "The category has been updated successfully",
-      });
-    } else {
-      setCategoriesList(prev => [...prev, category]);
-      toast({
-        title: "Category Added",
-        description: "The new category has been added successfully",
-      });
-    }
-    
-    setIsDialogOpen(false);
-    setCurrentCategory(null);
+  const handleAddNew = () => {
+    setEditing(null);
+    setFormData({
+      id: `c${Date.now()}`,
+      name: '',
+      description: '',
+      parentCategory: '',
+      active: true
+    });
+    setDialogOpen(true);
   };
 
-  const handleDeleteCategory = (id: string) => {
-    setCategoriesList(prev => prev.filter(category => category.id !== id));
-    toast({
-      title: "Category Deleted",
-      description: "The category has been deleted successfully",
-      variant: "destructive"
+  const handleEdit = (category: Category) => {
+    setEditing(category);
+    setFormData({
+      ...category,
+      parentCategory: category.parentCategory || ''
+    });
+    setDialogOpen(true);
+  };
+
+  const handleDelete = (category: Category) => {
+    const isParent = data.some(c => c.parentCategory === category.id);
+    if (isParent) {
+      toast.error(`Cannot delete ${category.name} as it is a parent to other categories.`);
+      return;
+    }
+    
+    if (confirm(`Are you sure you want to delete ${category.name}?`)) {
+      setData(data.filter(c => c.id !== category.id));
+      toast.success(`Category ${category.name} deleted successfully.`);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (editing) {
+      if (formData.parentCategory === editing.id) {
+        toast.error("A category cannot be its own parent.");
+        return;
+      }
+      
+      setData(data.map(c => c.id === editing.id ? formData : c));
+      toast.success(`Category ${formData.name} updated successfully.`);
+    } else {
+      setData([...data, formData]);
+      toast.success(`Category ${formData.name} added successfully.`);
+    }
+    
+    setDialogOpen(false);
+  };
+
+  const handleChange = (field: string, value: string | boolean) => {
+    setFormData({
+      ...formData,
+      [field]: value
     });
   };
 
-  const handleEditCategory = (category: Category) => {
-    setCurrentCategory(category);
-    setIsDialogOpen(true);
-  };
-
-  const getTypeBadge = (type: Category['type']) => {
-    switch (type) {
-      case 'hardware':
-        return <Badge className="bg-blue-500">Hardware</Badge>;
-      case 'software':
-        return <Badge className="bg-green-500">Software</Badge>;
-      default:
-        return <Badge>{type}</Badge>;
-    }
-  };
-
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return '';
-    return new Date(dateString).toLocaleDateString();
-  };
-
-  const renderAddEditForm = () => (
-    <form onSubmit={handleAddOrUpdateCategory} className="space-y-4">
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="name">Category Name</Label>
-          <Input 
-            id="name" 
-            name="name" 
-            defaultValue={currentCategory?.name || ''}
-            required
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="type">Type</Label>
-          <Select name="type" defaultValue={currentCategory?.type || 'hardware'}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="hardware">Hardware</SelectItem>
-              <SelectItem value="software">Software</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="description">Description</Label>
-          <Textarea 
-            id="description" 
-            name="description" 
-            rows={4}
-            defaultValue={currentCategory?.description || ''}
-          />
-        </div>
-      </div>
-      <DialogFooter>
-        <Button 
-          type="button" 
-          variant="secondary" 
-          onClick={() => {
-            setIsDialogOpen(false);
-            setCurrentCategory(null);
-          }}
-        >
-          Cancel
-        </Button>
-        <Button type="submit">
-          {currentCategory ? 'Update Category' : 'Add Category'}
-        </Button>
-      </DialogFooter>
-    </form>
-  );
+  const parentCategories = editing 
+    ? categories.filter(c => c.id !== editing.id) 
+    : categories;
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Categories</h1>
-          <p className="text-muted-foreground">Manage hardware and software categories</p>
+    <MainLayout title="Categories">
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Asset Categories</h1>
+            <p className="text-muted-foreground">Manage asset types and categories</p>
+          </div>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => setCurrentCategory(null)}>
-              <Plus className="mr-2 h-4 w-4" /> Add Category
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
+        
+        <DataTable 
+          title="Categories" 
+          columns={columns} 
+          data={data}
+          onAdd={handleAddNew}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+        />
+
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent>
             <DialogHeader>
-              <DialogTitle>{currentCategory ? 'Edit Category' : 'Add New Category'}</DialogTitle>
+              <DialogTitle>{editing ? 'Edit Category' : 'Add New Category'}</DialogTitle>
               <DialogDescription>
-                {currentCategory 
-                  ? 'Update the category details below.' 
-                  : 'Fill in the details for the new category.'}
+                {editing ? 'Update category details below.' : 'Enter the details for the new category.'}
               </DialogDescription>
             </DialogHeader>
-            {renderAddEditForm()}
+            
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Category Name</Label>
+                <Input 
+                  id="name" 
+                  value={formData.name} 
+                  onChange={(e) => handleChange('name', e.target.value)}
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea 
+                  id="description" 
+                  value={formData.description} 
+                  onChange={(e) => handleChange('description', e.target.value)}
+                  rows={3}
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="parentCategory">Parent Category (Optional)</Label>
+                <Select 
+                  value={formData.parentCategory} 
+                  onValueChange={(value) => handleChange('parentCategory', value)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="None" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">None</SelectItem>
+                    {parentCategories.map(category => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Switch 
+                  id="active" 
+                  checked={formData.active} 
+                  onCheckedChange={(value) => handleChange('active', value)} 
+                />
+                <Label htmlFor="active">Active Category</Label>
+              </div>
+              
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit">
+                  {editing ? 'Update' : 'Add'} Category
+                </Button>
+              </DialogFooter>
+            </form>
           </DialogContent>
         </Dialog>
       </div>
-
-      <Table>
-        <TableCaption>A list of all asset categories.</TableCaption>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Category Name</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead>Description</TableHead>
-            <TableHead>Created</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {categoriesList.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={5} className="text-center">No categories found</TableCell>
-            </TableRow>
-          ) : (
-            categoriesList.map((category) => (
-              <TableRow key={category.id}>
-                <TableCell className="font-medium">{category.name}</TableCell>
-                <TableCell>{getTypeBadge(category.type)}</TableCell>
-                <TableCell>{category.description || '-'}</TableCell>
-                <TableCell>{formatDate(category.createdAt)}</TableCell>
-                <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleEditCategory(category)}>
-                        <Edit className="mr-2 h-4 w-4" /> Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleDeleteCategory(category.id)}
-                        className="text-red-600">
-                        <Trash className="mr-2 h-4 w-4" /> Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
-    </div>
+    </MainLayout>
   );
 };
 

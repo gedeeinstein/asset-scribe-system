@@ -1,208 +1,197 @@
 
-import { useState } from "react";
-import { 
-  Table, 
-  TableBody, 
-  TableCaption, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow
-} from "@/components/ui/table";
+import React, { useState } from 'react';
+import MainLayout from '@/components/Layout/MainLayout';
+import DataTable from '@/components/DataTable';
 import { 
   Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogTrigger 
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { users, divisions, Division } from '@/lib/data';
 import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
-import { Plus, MoreHorizontal, Edit, Trash } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { divisions } from "../data/mockData";
-import { Division } from "../types/models";
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from '@/components/ui/select';
+import { toast } from 'sonner';
 
 const Divisions = () => {
-  const [divisionsList, setDivisionsList] = useState<Division[]>(divisions);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [currentDivision, setCurrentDivision] = useState<Division | null>(null);
-  const { toast } = useToast();
+  const [data, setData] = useState([...divisions]);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<Division | null>(null);
+  const [formData, setFormData] = useState({
+    id: '',
+    name: '',
+    description: '',
+    location: '',
+    manager: ''
+  });
 
-  const handleAddOrUpdateDivision = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    
-    const division: Division = {
-      id: currentDivision?.id || `division-${Date.now()}`,
-      name: formData.get('name') as string,
-      description: formData.get('description') as string || undefined,
-      createdAt: currentDivision?.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
+  const columns = [
+    { key: 'name', title: 'Division Name' },
+    { key: 'description', title: 'Description' },
+    { key: 'location', title: 'Location' },
+    { 
+      key: 'manager', 
+      title: 'Manager',
+      render: (row: Division) => {
+        const manager = users.find(u => u.name === row.manager);
+        return <span>{manager ? manager.name : 'Unassigned'}</span>;
+      }
+    },
+  ];
 
-    if (currentDivision) {
-      setDivisionsList(prev => prev.map(d => d.id === division.id ? division : d));
-      toast({
-        title: "Division Updated",
-        description: "The division has been updated successfully",
-      });
-    } else {
-      setDivisionsList(prev => [...prev, division]);
-      toast({
-        title: "Division Added",
-        description: "The new division has been added successfully",
-      });
-    }
-    
-    setIsDialogOpen(false);
-    setCurrentDivision(null);
+  const handleAddNew = () => {
+    setEditing(null);
+    setFormData({
+      id: `d${Date.now()}`,
+      name: '',
+      description: '',
+      location: '',
+      manager: ''
+    });
+    setDialogOpen(true);
   };
 
-  const handleDeleteDivision = (id: string) => {
-    setDivisionsList(prev => prev.filter(division => division.id !== id));
-    toast({
-      title: "Division Deleted",
-      description: "The division has been deleted successfully",
-      variant: "destructive"
+  const handleEdit = (division: Division) => {
+    setEditing(division);
+    setFormData({...division});
+    setDialogOpen(true);
+  };
+
+  const handleDelete = (division: Division) => {
+    if (confirm(`Are you sure you want to delete ${division.name}?`)) {
+      setData(data.filter(d => d.id !== division.id));
+      toast.success(`Division ${division.name} deleted successfully.`);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (editing) {
+      setData(data.map(d => d.id === editing.id ? formData : d));
+      toast.success(`Division ${formData.name} updated successfully.`);
+    } else {
+      setData([...data, formData]);
+      toast.success(`Division ${formData.name} added successfully.`);
+    }
+    
+    setDialogOpen(false);
+  };
+
+  const handleChange = (field: string, value: string) => {
+    setFormData({
+      ...formData,
+      [field]: value
     });
   };
 
-  const handleEditDivision = (division: Division) => {
-    setCurrentDivision(division);
-    setIsDialogOpen(true);
-  };
-
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return '';
-    return new Date(dateString).toLocaleDateString();
-  };
-
-  const renderAddEditForm = () => (
-    <form onSubmit={handleAddOrUpdateDivision} className="space-y-4">
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="name">Division Name</Label>
-          <Input 
-            id="name" 
-            name="name" 
-            defaultValue={currentDivision?.name || ''}
-            required
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="description">Description</Label>
-          <Textarea 
-            id="description" 
-            name="description" 
-            rows={4}
-            defaultValue={currentDivision?.description || ''}
-          />
-        </div>
-      </div>
-      <DialogFooter>
-        <Button 
-          type="button" 
-          variant="secondary" 
-          onClick={() => {
-            setIsDialogOpen(false);
-            setCurrentDivision(null);
-          }}
-        >
-          Cancel
-        </Button>
-        <Button type="submit">
-          {currentDivision ? 'Update Division' : 'Add Division'}
-        </Button>
-      </DialogFooter>
-    </form>
+  // Get managers (users with Manager or IT Admin role)
+  const managers = users.filter(user => 
+    user.role === 'Manager' || user.role === 'IT Admin'
   );
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Divisions</h1>
-          <p className="text-muted-foreground">Manage company divisions</p>
+    <MainLayout title="Divisions">
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Divisions</h1>
+            <p className="text-muted-foreground">Manage organization divisions and departments</p>
+          </div>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => setCurrentDivision(null)}>
-              <Plus className="mr-2 h-4 w-4" /> Add Division
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
+        
+        <DataTable 
+          title="Divisions" 
+          columns={columns} 
+          data={data}
+          onAdd={handleAddNew}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+        />
+
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent>
             <DialogHeader>
-              <DialogTitle>{currentDivision ? 'Edit Division' : 'Add New Division'}</DialogTitle>
+              <DialogTitle>{editing ? 'Edit Division' : 'Add New Division'}</DialogTitle>
               <DialogDescription>
-                {currentDivision 
-                  ? 'Update the division details below.' 
-                  : 'Fill in the details for the new division.'}
+                {editing ? 'Update division details below.' : 'Enter the details for the new division.'}
               </DialogDescription>
             </DialogHeader>
-            {renderAddEditForm()}
+            
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Division Name</Label>
+                <Input 
+                  id="name" 
+                  value={formData.name} 
+                  onChange={(e) => handleChange('name', e.target.value)}
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Textarea 
+                  id="description" 
+                  value={formData.description} 
+                  onChange={(e) => handleChange('description', e.target.value)}
+                  rows={3}
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="location">Location</Label>
+                  <Input 
+                    id="location" 
+                    value={formData.location} 
+                    onChange={(e) => handleChange('location', e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="manager">Manager</Label>
+                  <Select 
+                    value={formData.manager} 
+                    onValueChange={(value) => handleChange('manager', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a manager" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {managers.map(manager => (
+                        <SelectItem key={manager.id} value={manager.name}>
+                          {manager.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit">
+                  {editing ? 'Update' : 'Add'} Division
+                </Button>
+              </DialogFooter>
+            </form>
           </DialogContent>
         </Dialog>
       </div>
-
-      <Table>
-        <TableCaption>A list of all company divisions.</TableCaption>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Division Name</TableHead>
-            <TableHead>Description</TableHead>
-            <TableHead>Created</TableHead>
-            <TableHead>Last Updated</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {divisionsList.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={5} className="text-center">No divisions found</TableCell>
-            </TableRow>
-          ) : (
-            divisionsList.map((division) => (
-              <TableRow key={division.id}>
-                <TableCell className="font-medium">{division.name}</TableCell>
-                <TableCell>{division.description || '-'}</TableCell>
-                <TableCell>{formatDate(division.createdAt)}</TableCell>
-                <TableCell>{formatDate(division.updatedAt)}</TableCell>
-                <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleEditDivision(division)}>
-                        <Edit className="mr-2 h-4 w-4" /> Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleDeleteDivision(division.id)}
-                        className="text-red-600">
-                        <Trash className="mr-2 h-4 w-4" /> Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
-    </div>
+    </MainLayout>
   );
 };
 

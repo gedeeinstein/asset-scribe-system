@@ -1,269 +1,223 @@
 
-import { useState } from "react";
-import { 
-  Table, 
-  TableBody, 
-  TableCaption, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow
-} from "@/components/ui/table";
+import React, { useState } from 'react';
+import MainLayout from '@/components/Layout/MainLayout';
+import DataTable from '@/components/DataTable';
 import { 
   Dialog, 
-  DialogContent, 
-  DialogDescription, 
-  DialogFooter, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogTrigger 
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { 
   Select, 
   SelectContent, 
   SelectItem, 
   SelectTrigger, 
   SelectValue 
-} from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
-import { Badge } from "@/components/ui/badge";
-import { Plus, MoreHorizontal, Edit, Trash } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { users, divisions } from "../data/mockData";
-import { User } from "../types/models";
+} from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { users, divisions, User } from '@/lib/data';
+import { toast } from 'sonner';
 
 const Users = () => {
-  const [usersList, setUsersList] = useState<User[]>(users);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const { toast } = useToast();
+  const [data, setData] = useState([...users]);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<User | null>(null);
+  const [formData, setFormData] = useState({
+    id: '',
+    name: '',
+    email: '',
+    role: '',
+    division: '',
+    active: true
+  });
 
-  const handleAddOrUpdateUser = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-    
-    const user: User = {
-      id: currentUser?.id || `user-${Date.now()}`,
-      name: formData.get('name') as string,
-      email: formData.get('email') as string,
-      divisionId: formData.get('divisionId') as string,
-      role: (formData.get('role') as User['role']),
-      phone: formData.get('phone') as string || undefined,
-      createdAt: currentUser?.createdAt || new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
+  const columns = [
+    { key: 'name', title: 'Name' },
+    { key: 'email', title: 'Email' },
+    { key: 'role', title: 'Role' },
+    { 
+      key: 'division', 
+      title: 'Division',
+      render: (row: User) => {
+        const division = divisions.find(d => d.name === row.division);
+        return <span>{division ? division.name : 'Unassigned'}</span>;
+      }
+    },
+    { 
+      key: 'active', 
+      title: 'Status',
+      render: (row: User) => (
+        <span className={`px-2 py-1 text-xs rounded-full ${row.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+          {row.active ? 'Active' : 'Inactive'}
+        </span>
+      )
+    },
+  ];
 
-    if (currentUser) {
-      setUsersList(prev => prev.map(u => u.id === user.id ? user : u));
-      toast({
-        title: "User Updated",
-        description: "The user has been updated successfully",
-      });
-    } else {
-      setUsersList(prev => [...prev, user]);
-      toast({
-        title: "User Added",
-        description: "The new user has been added successfully",
-      });
-    }
-    
-    setIsDialogOpen(false);
-    setCurrentUser(null);
+  const handleAddNew = () => {
+    setEditing(null);
+    setFormData({
+      id: `u${Date.now()}`,
+      name: '',
+      email: '',
+      role: '',
+      division: '',
+      active: true
+    });
+    setDialogOpen(true);
   };
 
-  const handleDeleteUser = (id: string) => {
-    setUsersList(prev => prev.filter(user => user.id !== id));
-    toast({
-      title: "User Deleted",
-      description: "The user has been deleted successfully",
-      variant: "destructive"
+  const handleEdit = (user: User) => {
+    setEditing(user);
+    setFormData({...user});
+    setDialogOpen(true);
+  };
+
+  const handleDelete = (user: User) => {
+    if (confirm(`Are you sure you want to delete ${user.name}?`)) {
+      setData(data.filter(u => u.id !== user.id));
+      toast.success(`User ${user.name} deleted successfully.`);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (editing) {
+      setData(data.map(u => u.id === editing.id ? formData : u));
+      toast.success(`User ${formData.name} updated successfully.`);
+    } else {
+      setData([...data, formData]);
+      toast.success(`User ${formData.name} added successfully.`);
+    }
+    
+    setDialogOpen(false);
+  };
+
+  const handleChange = (field: string, value: string | boolean) => {
+    setFormData({
+      ...formData,
+      [field]: value
     });
   };
 
-  const handleEditUser = (user: User) => {
-    setCurrentUser(user);
-    setIsDialogOpen(true);
-  };
-
-  const getRoleBadge = (role: User['role']) => {
-    switch (role) {
-      case 'admin':
-        return <Badge className="bg-purple-500">Admin</Badge>;
-      case 'technician':
-        return <Badge className="bg-blue-500">Technician</Badge>;
-      case 'user':
-        return <Badge variant="secondary">User</Badge>;
-      default:
-        return <Badge>{role}</Badge>;
-    }
-  };
-
-  const getDivisionName = (divisionId: string) => {
-    return divisions.find(div => div.id === divisionId)?.name || 'Unknown';
-  };
-
-  const renderAddEditForm = () => (
-    <form onSubmit={handleAddOrUpdateUser} className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label htmlFor="name">Name</Label>
-          <Input 
-            id="name" 
-            name="name" 
-            defaultValue={currentUser?.name || ''}
-            required
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <Input 
-            id="email" 
-            name="email" 
-            type="email"
-            defaultValue={currentUser?.email || ''}
-            required
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="divisionId">Division</Label>
-          <Select name="divisionId" defaultValue={currentUser?.divisionId || ''}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select division" />
-            </SelectTrigger>
-            <SelectContent>
-              {divisions.map(division => (
-                <SelectItem key={division.id} value={division.id}>
-                  {division.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="role">Role</Label>
-          <Select name="role" defaultValue={currentUser?.role || 'user'}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select role" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="admin">Admin</SelectItem>
-              <SelectItem value="technician">Technician</SelectItem>
-              <SelectItem value="user">User</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="phone">Phone</Label>
-          <Input 
-            id="phone" 
-            name="phone" 
-            defaultValue={currentUser?.phone || ''}
-          />
-        </div>
-      </div>
-      <DialogFooter>
-        <Button 
-          type="button" 
-          variant="secondary" 
-          onClick={() => {
-            setIsDialogOpen(false);
-            setCurrentUser(null);
-          }}
-        >
-          Cancel
-        </Button>
-        <Button type="submit">
-          {currentUser ? 'Update User' : 'Add User'}
-        </Button>
-      </DialogFooter>
-    </form>
-  );
-
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Users</h1>
-          <p className="text-muted-foreground">Manage users of IT assets</p>
+    <MainLayout title="Users">
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">Users</h1>
+            <p className="text-muted-foreground">Manage user accounts and access</p>
+          </div>
         </div>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => setCurrentUser(null)}>
-              <Plus className="mr-2 h-4 w-4" /> Add User
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[600px]">
+        
+        <DataTable 
+          title="User Accounts" 
+          columns={columns} 
+          data={data}
+          onAdd={handleAddNew}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+        />
+
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <DialogContent>
             <DialogHeader>
-              <DialogTitle>{currentUser ? 'Edit User' : 'Add New User'}</DialogTitle>
+              <DialogTitle>{editing ? 'Edit User' : 'Add New User'}</DialogTitle>
               <DialogDescription>
-                {currentUser 
-                  ? 'Update the user details below.' 
-                  : 'Fill in the details for the new user.'}
+                {editing ? 'Update user details below.' : 'Enter the details for the new user.'}
               </DialogDescription>
             </DialogHeader>
-            {renderAddEditForm()}
+            
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Full Name</Label>
+                  <Input 
+                    id="name" 
+                    value={formData.name} 
+                    onChange={(e) => handleChange('name', e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input 
+                    id="email" 
+                    type="email" 
+                    value={formData.email} 
+                    onChange={(e) => handleChange('email', e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="role">Role</Label>
+                  <Select 
+                    value={formData.role} 
+                    onValueChange={(value) => handleChange('role', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select role" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="IT Admin">IT Admin</SelectItem>
+                      <SelectItem value="Manager">Manager</SelectItem>
+                      <SelectItem value="IT Support">IT Support</SelectItem>
+                      <SelectItem value="End User">End User</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="division">Division</Label>
+                  <Select 
+                    value={formData.division} 
+                    onValueChange={(value) => handleChange('division', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select division" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {divisions.map(division => (
+                        <SelectItem key={division.id} value={division.name}>
+                          {division.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              
+              <div className="flex items-center space-x-2">
+                <Switch 
+                  id="active" 
+                  checked={formData.active} 
+                  onCheckedChange={(value) => handleChange('active', value)} 
+                />
+                <Label htmlFor="active">Active Account</Label>
+              </div>
+              
+              <DialogFooter>
+                <Button type="button" variant="outline" onClick={() => setDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit">
+                  {editing ? 'Update' : 'Add'} User
+                </Button>
+              </DialogFooter>
+            </form>
           </DialogContent>
         </Dialog>
       </div>
-
-      <Table>
-        <TableCaption>A list of all users.</TableCaption>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Division</TableHead>
-            <TableHead>Role</TableHead>
-            <TableHead>Phone</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {usersList.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={6} className="text-center">No users found</TableCell>
-            </TableRow>
-          ) : (
-            usersList.map((user) => (
-              <TableRow key={user.id}>
-                <TableCell>{user.name}</TableCell>
-                <TableCell>{user.email}</TableCell>
-                <TableCell>{getDivisionName(user.divisionId)}</TableCell>
-                <TableCell>{getRoleBadge(user.role)}</TableCell>
-                <TableCell>{user.phone || '-'}</TableCell>
-                <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleEditUser(user)}>
-                        <Edit className="mr-2 h-4 w-4" /> Edit
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleDeleteUser(user.id)}
-                        className="text-red-600">
-                        <Trash className="mr-2 h-4 w-4" /> Delete
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))
-          )}
-        </TableBody>
-      </Table>
-    </div>
+    </MainLayout>
   );
 };
 
