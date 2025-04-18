@@ -25,18 +25,31 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 
+// Define the Component interface to match the database schema
+interface ComponentType {
+  id: string;
+  name: string;
+  type: string;
+  manufacturer: string;
+  model: string;
+  serial_number: string;
+  purchase_date: string;
+  warranty_expires: string | null;
+  notes: string;
+}
+
 const Components = () => {
   const { data = [], refetch } = useComponents();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editing, setEditing] = useState(null);
-  const [formData, setFormData] = useState({
+  const [editing, setEditing] = useState<ComponentType | null>(null);
+  const [formData, setFormData] = useState<ComponentType>({
     id: '',
     name: '',
     type: '',
     manufacturer: '',
     model: '',
     serial_number: '',
-    purchase_date: '',
+    purchase_date: new Date().toISOString().split('T')[0],
     warranty_expires: null,
     notes: ''
   });
@@ -46,16 +59,19 @@ const Components = () => {
     { key: 'type', title: 'Type' },
     { key: 'manufacturer', title: 'Manufacturer' },
     { key: 'model', title: 'Model' },
-    { key: 'serialNumber', title: 'Serial Number' },
     { 
-      key: 'purchaseDate', 
-      title: 'Purchase Date',
-      render: (row: Component) => new Date(row.purchaseDate).toLocaleDateString()
+      key: 'serial_number', 
+      title: 'Serial Number'
     },
     { 
-      key: 'warrantyExpires', 
+      key: 'purchase_date', 
+      title: 'Purchase Date',
+      render: (row: ComponentType) => row.purchase_date ? new Date(row.purchase_date).toLocaleDateString() : 'N/A'
+    },
+    { 
+      key: 'warranty_expires', 
       title: 'Warranty Expires',
-      render: (row: Component) => row.warrantyExpires ? new Date(row.warrantyExpires).toLocaleDateString() : 'No warranty'
+      render: (row: ComponentType) => row.warranty_expires ? new Date(row.warranty_expires).toLocaleDateString() : 'No warranty'
     }
   ];
 
@@ -80,13 +96,13 @@ const Components = () => {
     setDialogOpen(true);
   };
 
-  const handleEdit = (component) => {
+  const handleEdit = (component: ComponentType) => {
     setEditing(component);
     setFormData({...component});
     setDialogOpen(true);
   };
 
-  const handleDelete = async (component) => {
+  const handleDelete = async (component: ComponentType) => {
     if (confirm(`Are you sure you want to delete ${component.name}?`)) {
       const { error } = await supabase
         .from('it_assets_components')
@@ -225,29 +241,29 @@ const Components = () => {
               
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="serialNumber">Serial Number</Label>
+                  <Label htmlFor="serial_number">Serial Number</Label>
                   <Input 
-                    id="serialNumber" 
-                    value={formData.serialNumber} 
-                    onChange={(e) => handleChange('serialNumber', e.target.value)}
+                    id="serial_number" 
+                    value={formData.serial_number} 
+                    onChange={(e) => handleChange('serial_number', e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="purchaseDate">Purchase Date</Label>
+                  <Label htmlFor="purchase_date">Purchase Date</Label>
                   <Input 
-                    id="purchaseDate" 
+                    id="purchase_date" 
                     type="date" 
-                    value={formData.purchaseDate}
-                    onChange={(e) => handleChange('purchaseDate', e.target.value)}
+                    value={formData.purchase_date}
+                    onChange={(e) => handleChange('purchase_date', e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="warrantyExpires">Warranty Expiration (Optional)</Label>
+                  <Label htmlFor="warranty_expires">Warranty Expiration (Optional)</Label>
                   <Input 
-                    id="warrantyExpires" 
+                    id="warranty_expires" 
                     type="date" 
-                    value={formData.warrantyExpires || ''}
-                    onChange={(e) => handleChange('warrantyExpires', e.target.value || null)}
+                    value={formData.warranty_expires || ''}
+                    onChange={(e) => handleChange('warranty_expires', e.target.value || null)}
                   />
                 </div>
               </div>
