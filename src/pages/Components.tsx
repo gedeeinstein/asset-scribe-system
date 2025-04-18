@@ -14,7 +14,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { components, Component } from '@/lib/data';
+import { useComponents } from '@/hooks/useSupabaseData';
+import { supabase } from '@/integrations/supabase/client';
 import { 
   Select, 
   SelectContent, 
@@ -25,18 +26,18 @@ import {
 import { toast } from 'sonner';
 
 const Components = () => {
-  const [data, setData] = useState([...components]);
+  const { data = [], refetch } = useComponents();
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editing, setEditing] = useState<Component | null>(null);
-  const [formData, setFormData] = useState<Component>({
+  const [editing, setEditing] = useState(null);
+  const [formData, setFormData] = useState({
     id: '',
     name: '',
     type: '',
     manufacturer: '',
     model: '',
-    serialNumber: '',
-    purchaseDate: '',
-    warrantyExpires: null,
+    serial_number: '',
+    purchase_date: '',
+    warranty_expires: null,
     notes: ''
   });
 
@@ -66,43 +67,71 @@ const Components = () => {
   const handleAddNew = () => {
     setEditing(null);
     setFormData({
-      id: `comp${Date.now()}`,
+      id: '',
       name: '',
       type: '',
       manufacturer: '',
       model: '',
-      serialNumber: '',
-      purchaseDate: new Date().toISOString().split('T')[0],
-      warrantyExpires: null,
+      serial_number: '',
+      purchase_date: new Date().toISOString().split('T')[0],
+      warranty_expires: null,
       notes: ''
     });
     setDialogOpen(true);
   };
 
-  const handleEdit = (component: Component) => {
+  const handleEdit = (component) => {
     setEditing(component);
     setFormData({...component});
     setDialogOpen(true);
   };
 
-  const handleDelete = (component: Component) => {
+  const handleDelete = async (component) => {
     if (confirm(`Are you sure you want to delete ${component.name}?`)) {
-      setData(data.filter(c => c.id !== component.id));
+      const { error } = await supabase
+        .from('it_assets_components')
+        .delete()
+        .eq('id', component.id);
+
+      if (error) {
+        toast.error('Failed to delete component');
+        return;
+      }
+
+      refetch();
       toast.success(`Component ${component.name} deleted successfully.`);
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (editing) {
-      setData(data.map(c => c.id === editing.id ? formData : c));
+      const { error } = await supabase
+        .from('it_assets_components')
+        .update(formData)
+        .eq('id', editing.id);
+
+      if (error) {
+        toast.error('Failed to update component');
+        return;
+      }
+
       toast.success(`Component ${formData.name} updated successfully.`);
     } else {
-      setData([...data, formData]);
+      const { error } = await supabase
+        .from('it_assets_components')
+        .insert([formData]);
+
+      if (error) {
+        toast.error('Failed to add component');
+        return;
+      }
+
       toast.success(`Component ${formData.name} added successfully.`);
     }
     
+    refetch();
     setDialogOpen(false);
   };
 

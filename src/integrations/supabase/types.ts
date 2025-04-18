@@ -256,6 +256,206 @@ export type Database = {
         }
         Relationships: []
       }
+      it_assets_asset_components: {
+        Row: {
+          asset_id: string
+          component_id: string
+        }
+        Insert: {
+          asset_id: string
+          component_id: string
+        }
+        Update: {
+          asset_id?: string
+          component_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "it_assets_asset_components_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "it_assets_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "it_assets_asset_components_component_id_fkey"
+            columns: ["component_id"]
+            isOneToOne: false
+            referencedRelation: "it_assets_components"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      it_assets_assets: {
+        Row: {
+          assigned_to: string | null
+          category: string
+          created_at: string
+          division: string | null
+          id: string
+          last_maintenance: string | null
+          name: string
+          notes: string | null
+          purchase_date: string | null
+          status: string
+          type: string
+          updated_at: string
+          warranty_expires: string | null
+        }
+        Insert: {
+          assigned_to?: string | null
+          category: string
+          created_at?: string
+          division?: string | null
+          id?: string
+          last_maintenance?: string | null
+          name: string
+          notes?: string | null
+          purchase_date?: string | null
+          status: string
+          type: string
+          updated_at?: string
+          warranty_expires?: string | null
+        }
+        Update: {
+          assigned_to?: string | null
+          category?: string
+          created_at?: string
+          division?: string | null
+          id?: string
+          last_maintenance?: string | null
+          name?: string
+          notes?: string | null
+          purchase_date?: string | null
+          status?: string
+          type?: string
+          updated_at?: string
+          warranty_expires?: string | null
+        }
+        Relationships: []
+      }
+      it_assets_categories: {
+        Row: {
+          active: boolean | null
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          parent_category: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          parent_category?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          parent_category?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "it_assets_categories_parent_category_fkey"
+            columns: ["parent_category"]
+            isOneToOne: false
+            referencedRelation: "it_assets_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      it_assets_components: {
+        Row: {
+          created_at: string
+          id: string
+          manufacturer: string
+          model: string
+          name: string
+          notes: string | null
+          purchase_date: string | null
+          serial_number: string | null
+          type: string
+          warranty_expires: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          manufacturer: string
+          model: string
+          name: string
+          notes?: string | null
+          purchase_date?: string | null
+          serial_number?: string | null
+          type: string
+          warranty_expires?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          manufacturer?: string
+          model?: string
+          name?: string
+          notes?: string | null
+          purchase_date?: string | null
+          serial_number?: string | null
+          type?: string
+          warranty_expires?: string | null
+        }
+        Relationships: []
+      }
+      it_assets_divisions: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          location: string | null
+          manager: string | null
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          location?: string | null
+          manager?: string | null
+          name: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          location?: string | null
+          manager?: string | null
+          name?: string
+        }
+        Relationships: []
+      }
+      it_assets_types: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       maintenance_tasks: {
         Row: {
           assembly_id: string | null
